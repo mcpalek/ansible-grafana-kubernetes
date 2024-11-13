@@ -1,0 +1,15 @@
+
+
+    - name: Gather facts about the node
+      ansible.builtin.setup:
+        gather_subset:
+          - network
+      register: node_facts
+
+    - name: Set node IP to a variable
+      set_fact:
+        node_ip: "{{ node_facts.ansible_facts['ansible_default_ipv4']['address'] }}"
+
+    - name: Display the node IP
+      debug:
+        msg: "The node IP address is: {{ node_ip }}"

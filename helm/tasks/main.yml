@@ -1,0 +1,56 @@
+---
+- name: Check if Helm is installed
+  stat:
+    path: /usr/local/bin/helm
+  register: helm_binary
+
+- name: Install dependencies on Debian-based systems
+  apt:
+    name:
+      - curl
+      - apt-transport-https
+      - gnupg
+    state: present
+    update_cache: yes
+  when: not helm_binary.stat.exists and ansible_os_family == "Debian"
+
+- name: Install dependencies on Red Hat-based systems
+  yum:
+    name:
+      - curl
+      - gnupg2
+      - yum-utils
+    state: present
+    update_cache: yes
+  when: not helm_binary.stat.exists and ansible_os_family == "RedHat"
+
+- name: Download Helm binary
+  get_url:
+    url: https://get.helm.sh/helm-v3.8.0-linux-amd64.tar.gz
+    dest: /tmp/helm-v3.8.0-linux-amd64.tar.gz
+  when: not helm_binary.stat.exists
+
+- name: Extract Helm binary
+  unarchive:
+    src: /tmp/helm-v3.8.0-linux-amd64.tar.gz
+    dest: /tmp
+    remote_src: yes
+  when: not helm_binary.stat.exists
+
+- name: Move Helm binary to /usr/local/bin
+  command: mv /tmp/linux-amd64/helm /usr/local/bin/helm
+  when: not helm_binary.stat.exists
+
+- name: Add Prometheus community repo
+  command: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  register: add_repo
+  failed_when: false
+  when: not helm_binary.stat.exists
+
+- name: Update Helm repositories
+  command: helm repo update
+  when: add_repo.changed
+
+- name: Verify Helm installation
+  command: helm version
+  when: not helm_binary.stat.exists
